@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-gradient: radial-gradient(ellipse at top, #2c1488 0%, #160844 45%, #0a0524 100%);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply font-body text-parchment-50;
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* CoC-style wood panel */
+.panel-wood {
+  position: relative;
+  background: linear-gradient(180deg, #6b3f1d 0%, #4a2710 100%);
+  border: 4px solid #241407;
+  border-radius: 18px;
+  box-shadow:
+    inset 0 0 0 3px #a06410,
+    inset 0 4px 0 rgba(255, 214, 107, 0.25),
+    inset 0 -6px 0 rgba(0, 0, 0, 0.35),
+    0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.panel-parchment {
+  background: linear-gradient(180deg, #fbf3dd 0%, #efd99a 100%);
+  border: 3px solid #a06410;
+  border-radius: 14px;
+  color: #3a2616;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.12),
+    0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.panel-stone {
+  background: linear-gradient(180deg, #6b6b85 0%, #3a3a55 100%);
+  border: 3px solid #1a1a2e;
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 2px #8d8da8,
+    inset 0 4px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.35),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.btn-gold {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 font-display text-bark-900 select-none cursor-pointer transition-transform;
+  background: linear-gradient(180deg, #ffd66b 0%, #f5b53d 50%, #d99020 100%);
+  border: 3px solid #5a3208;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.25),
+    0 4px 0 #5a3208,
+    0 6px 12px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.btn-gold:hover {
+  transform: translateY(-1px);
+}
+.btn-gold:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 2px 0 #5a3208;
+}
+.btn-gold:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-stone {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 font-display text-parchment-50 select-none cursor-pointer transition-transform;
+  background: linear-gradient(180deg, #6b6b85 0%, #3a3a55 100%);
+  border: 3px solid #1a1a2e;
+  border-radius: 10px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+    0 3px 0 #1a1a2e;
+}
+.btn-stone:hover {
+  transform: translateY(-1px);
+}
+
+.btn-ember {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 font-display text-parchment-50 select-none cursor-pointer transition-transform;
+  background: linear-gradient(180deg, #ff8a3d 0%, #ef5b1f 50%, #c63d0e 100%);
+  border: 3px solid #6b1f04;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.3),
+    0 4px 0 #6b1f04;
+}
+.btn-ember:hover {
+  transform: translateY(-1px);
+}
+
+.gem {
+  background: radial-gradient(circle at 30% 30%, #7dd957, #358a18 60%, #1b4708 100%);
+  border: 2px solid #142d05;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.3),
+    0 0 14px rgba(125, 217, 87, 0.5);
+}
+
+.coin {
+  background: radial-gradient(circle at 30% 30%, #ffe69b, #f5b53d 55%, #a06410 100%);
+  border: 2px solid #5a3208;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.3),
+    0 0 12px rgba(245, 181, 61, 0.45);
+}
+
+.pill {
+  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold;
+}
+
+.divider-rope {
+  height: 6px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #a06410 0 8px,
+      #5a3208 8px 16px
+    );
+  border-radius: 3px;
+}
+
+/* Hide scrollbars on horizontal scrollers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Code/mono blocks */
+.code {
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  font-feature-settings: "calt" 0;
+}
