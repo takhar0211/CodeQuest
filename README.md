@@ -357,6 +357,3 @@ Side panels accessible from the HUD: Trophy Hall (`/achievements`), Hall of Cham
 - React 19 + Next 15 are intentionally pinned; bump them when your team is ready to test.
 
 ---
-
-## Generated with
-🤖 Claude Code (Opus 4.7)
