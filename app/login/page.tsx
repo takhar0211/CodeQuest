@@ -9,6 +9,9 @@ import {
   getSupabaseBrowserClient,
   isSupabaseConfigured,
 } from "@/lib/supabase/browser";
+import { loadProfileFromSupabase } from "@/lib/sync/profile";
+import { useGameStore } from "@/lib/game/store";
+import { setSyncBridge } from "@/lib/sync/bridge";
 
 export default function LoginPage() {
   return (
@@ -37,13 +40,20 @@ function LoginForm() {
     setError(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error: err } = await supabase.auth.signInWithPassword({
+      const { data, error: err } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
       if (err) {
         setError(err.message);
       } else {
+        if (data.user) {
+          const serverProfile = await loadProfileFromSupabase(supabase, data.user.id);
+          if (serverProfile) {
+            useGameStore.setState({ profile: serverProfile, hydrated: true });
+          }
+          setSyncBridge({ supabase, user: data.user });
+        }
         router.replace(next);
       }
     } catch (e: unknown) {

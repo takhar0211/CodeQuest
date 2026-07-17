@@ -43,6 +43,7 @@ async function getPyodide(): Promise<PyodideAPI> {
 export async function runPython(
   code: string,
   timeoutMs = 8000,
+  stdin?: string
 ): Promise<{ output: string; error?: string }> {
   const py = await getPyodide();
   const out: string[] = [];
@@ -54,9 +55,16 @@ export async function runPython(
   // limit as an error if exceeded after the fact.
   const start = performance.now();
   try {
+    if (stdin !== undefined) {
+      py.runPython(`import sys, io\nsys.stdin = io.StringIO(${JSON.stringify(stdin)})\n`);
+    }
     py.runPython(code);
   } catch (e: unknown) {
     err.push(e instanceof Error ? e.message : String(e));
+  } finally {
+    if (stdin !== undefined) {
+      py.runPython(`sys.stdin = sys.__stdin__\n`);
+    }
   }
   const elapsed = performance.now() - start;
   return {

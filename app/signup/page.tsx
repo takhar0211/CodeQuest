@@ -9,6 +9,9 @@ import {
   getSupabaseBrowserClient,
   isSupabaseConfigured,
 } from "@/lib/supabase/browser";
+import { loadProfileFromSupabase } from "@/lib/sync/profile";
+import { useGameStore } from "@/lib/game/store";
+import { setSyncBridge } from "@/lib/sync/bridge";
 
 export default function SignupPage() {
   return (
@@ -54,6 +57,13 @@ function SignupForm() {
         // Email confirmation enabled — user must verify before signing in.
         setNeedsConfirm(true);
       } else {
+        if (data.user) {
+          const serverProfile = await loadProfileFromSupabase(supabase, data.user.id);
+          if (serverProfile) {
+            useGameStore.setState({ profile: serverProfile, hydrated: true });
+          }
+          setSyncBridge({ supabase, user: data.user });
+        }
         router.replace(next);
       }
     } catch (e: unknown) {

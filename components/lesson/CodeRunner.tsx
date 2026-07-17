@@ -27,21 +27,49 @@ export function CodeRunner({ language, exercise, onSuccess, alreadyCompleted }: 
     setError(null);
     setOutput(null);
     try {
-      const res =
-        language === "python"
-          ? await runPython(code)
-          : await runJavaScript(code);
-      setOutput(res.output);
-      setError(res.error ?? null);
+      if (exercise.testcases && exercise.testcases.length > 0) {
+        let allPassed = true;
+        const outputs = [];
+        for (let i = 0; i < exercise.testcases.length; i++) {
+          const tc = exercise.testcases[i];
+          const res = language === "python" ? await runPython(code, 8000, tc.stdin) : await runJavaScript(code);
+          if (res.error) {
+            setError(`Testcase ${i + 1} failed with error:\n${res.error}`);
+            allPassed = false;
+            break;
+          }
+          outputs.push(`Testcase ${i + 1}:\nOutput: ${res.output.trim() || "(empty)"}`);
+          const passed = tc.expectedOutputIncludes ? normalize(res.output).includes(normalize(tc.expectedOutputIncludes)) : true;
+          if (!passed) {
+             allPassed = false;
+             setError(`Testcase ${i + 1} failed.\nInput: ${tc.stdin}\nExpected output to include: ${tc.expectedOutputIncludes}\nGot: ${res.output}`);
+             break;
+          }
+        }
+        if (allPassed) {
+           setOutput("All testcases passed!\n\n" + outputs.join("\n---\n"));
+           if (!success) {
+             setSuccess(true);
+             onSuccess();
+           }
+        }
+      } else {
+        const res =
+          language === "python"
+            ? await runPython(code, 8000, exercise.stdin)
+            : await runJavaScript(code);
+        setOutput(res.output);
+        setError(res.error ?? null);
 
-      if (!res.error) {
-        const expected = exercise.expectedOutputIncludes;
-        const passed = expected
-          ? normalize(res.output).includes(normalize(expected))
-          : true;
-        if (passed && !success) {
-          setSuccess(true);
-          onSuccess();
+        if (!res.error) {
+          const expected = exercise.expectedOutputIncludes;
+          const passed = expected
+            ? normalize(res.output).includes(normalize(expected))
+            : true;
+          if (passed && !success) {
+            setSuccess(true);
+            onSuccess();
+          }
         }
       }
     } catch (e: unknown) {

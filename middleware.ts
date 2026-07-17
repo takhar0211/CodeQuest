@@ -26,7 +26,18 @@ export async function middleware(request: NextRequest) {
   });
 
   // Refresh the session cookie if it's near expiry.
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const isProtectedRoute = request.nextUrl.pathname.match(/^\/(dashboard|learn|quiz|mentor|achievements|leaderboard|onboarding)/);
+  const isAuthRoute = request.nextUrl.pathname.match(/^\/(login|signup)$/) || request.nextUrl.pathname === "/";
+
+  if (isProtectedRoute && !user) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (isAuthRoute && user) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
 
   return response;
 }

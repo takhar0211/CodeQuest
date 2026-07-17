@@ -40,8 +40,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ["'Cinzel'", "Georgia", "serif"],
-        body: ["'Inter'", "system-ui", "sans-serif"],
+        display: ["var(--font-cinzel)", "Georgia", "serif"],
+        body: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
       boxShadow: {
         wood: "inset 0 0 0 4px #241407, 0 6px 0 0 #160844, 0 10px 30px rgba(0,0,0,0.4)",

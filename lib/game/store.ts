@@ -8,7 +8,7 @@ import type {
   SkillLevel,
   UserProfile,
 } from "@/lib/types";
-import { bumpStreak } from "./engine";
+import { bumpStreak, levelForXp } from "./engine";
 import { evaluateAchievements } from "./achievements";
 import { getSyncBridge } from "@/lib/sync/bridge";
 import {
@@ -172,10 +172,6 @@ export const useGameStore = create<State & Actions>()(
             icon: id,
           })),
         ];
-        // Level-up check using stricter math from engine
-        // We import lazily here to avoid a top-level cycle.
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { levelForXp } = require("./engine") as typeof import("./engine");
         const oldLvl = levelForXp(prev.xp);
         const newLvl = levelForXp(next.xp);
         if (newLvl > oldLvl) {
@@ -265,8 +261,6 @@ export const useGameStore = create<State & Actions>()(
             title: "Module conquered!",
           });
         }
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { levelForXp } = require("./engine") as typeof import("./engine");
         const oldLvl = levelForXp(prev.xp);
         const newLvl = levelForXp(next.xp);
         if (newLvl > oldLvl) {

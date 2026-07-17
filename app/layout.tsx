@@ -1,11 +1,39 @@
 import type { Metadata } from "next";
+import { Cinzel, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 
+const cinzel = Cinzel({
+  subsets: ["latin"],
+  weight: ["500", "700", "900"],
+  variable: "--font-cinzel",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "CodeQuest — Learn languages like a chieftain",
-  description:
-    "A gamified, Clash-of-Clans-inspired way to learn a new programming language by leveraging what you already know.",
+  description: "A gamified, Clash-of-Clans-inspired way to learn a new programming language by leveraging what you already know.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  openGraph: {
+    title: "CodeQuest — Learn languages like a chieftain",
+    description: "A gamified way to learn a new programming language by leveraging what you already know.",
+    url: "/",
+    siteName: "CodeQuest",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CodeQuest — Learn languages like a chieftain",
+    description: "A gamified way to learn a new programming language by leveraging what you already know.",
+  },
 };
 
 export default function RootLayout({
@@ -14,19 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" suppressHydrationWarning className={`${cinzel.variable} ${inter.variable}`}>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>

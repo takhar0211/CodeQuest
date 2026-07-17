@@ -34,6 +34,10 @@ export interface Exercise {
   solution: string;
   /** Substring/snippet that must appear in the solution for it to count. */
   expectedOutputIncludes?: string;
+  /** Optional stdin for simple single-testcase evaluation. */
+  stdin?: string;
+  /** Optional multiple testcases to run instead of a single check. */
+  testcases?: { stdin: string; expectedOutputIncludes: string }[];
   /** Optional: a JS predicate string-compiled at runtime, given { output, code } */
   successHint?: string;
   xp: number;

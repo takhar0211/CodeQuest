@@ -36,6 +36,11 @@ export default function Dashboard() {
     return findCourse(profile.knownLang, profile.targetLang);
   }, [profile.knownLang, profile.targetLang]);
 
+  const levelModules = useMemo(() => {
+    if (!course) return [];
+    return course.modules.filter((m) => m.level === profile.level);
+  }, [course, profile.level]);
+
   return (
     <ClientShell>
       {!course ? (
@@ -56,8 +61,8 @@ export default function Dashboard() {
               <div className="font-body text-parchment-100/90 text-sm mt-1">
                 Rank: <span className="text-gold-400 capitalize">{profile.level}</span>
                 {" · "}
-                {Object.values(profile.progress).filter((p) => p.completed).length}
-                /{course.modules.length} modules conquered
+                {Object.values(profile.progress).filter((p) => p.completed && levelModules.some(m => m.id === p.moduleId)).length}
+                /{levelModules.length} modules conquered
               </div>
             </div>
             <Link href="/onboarding" className="btn-stone text-sm">
@@ -65,7 +70,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <KingdomMap modules={course.modules} />
+          <KingdomMap modules={levelModules} />
         </div>
       )}
     </ClientShell>
