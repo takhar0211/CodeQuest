@@ -40,6 +40,7 @@ function systemPrompt(ctx: Body["context"]): string {
     `- Use Markdown. Use fenced code blocks with a language tag (e.g. \`\`\`${ctx.targetLang.toLowerCase()}).`,
     `- When the user asks something off-topic from learning ${ctx.targetLang}, gently steer back ("That's outside my keep — want to bring it back to ${ctx.targetLang}?"). Do NOT refuse pleasantries, jokes, or motivation — be a real mentor.`,
     `- Never invent APIs. If you're unsure, say so and suggest where they'd verify (official docs, REPL).`,
+    `- Ensure your response is complete and does not cut off abruptly. You have up to 4096 tokens, use them if necessary to finish your thought.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -95,7 +96,7 @@ export async function POST(req: Request) {
     contents,
     generationConfig: {
       temperature: 0.6,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 4096,
     },
   };
 

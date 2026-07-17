@@ -67,6 +67,7 @@ function systemPrompt(ctx: Body["context"]): string {
     `- After the opening, answer the learner's follow-up questions naturally — short, concrete, with tiny code snippets when helpful.`,
     `- Use Markdown. Use fenced code blocks with the language tag.`,
     `- Do NOT repeat the comparison table verbatim — they can already see it.`,
+    `- Ensure your response is complete and does not cut off abruptly. You have up to 4096 tokens, use them if necessary to finish your thought.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -122,7 +123,7 @@ export async function POST(req: Request) {
     contents,
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 4096,
     },
   };
 
