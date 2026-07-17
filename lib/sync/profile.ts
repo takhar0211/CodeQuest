@@ -69,10 +69,15 @@ export async function loadProfileFromSupabase(
     ]);
 
   if (profileErr) {
-    console.warn("loadProfile error", profileErr);
+    console.error("❌ loadProfile error:", profileErr);
     return null;
   }
-  if (!row) return null;
+  if (!row) {
+    console.log(`⚠️ No profile row found for user ${userId}. This is expected for brand new signups before the trigger runs, but a bug if they are an existing user.`);
+    return null;
+  }
+
+  console.log(`✅ Profile fetched for user ${userId} | Onboarded: ${row.onboarded} | Name: ${row.display_name}`);
 
   const progress: Record<string, ModuleProgress> = {};
   for (const r of progressRows ?? []) {
@@ -131,7 +136,11 @@ export async function saveProfileToSupabase(
     onboarded: profile.onboarded,
   };
   const { error } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
-  if (error) console.warn("saveProfile error", error);
+  if (error) {
+    console.error("❌ saveProfile error:", error);
+  } else {
+    console.log(`✅ Profile saved for user ${userId} | Onboarded: ${profile.onboarded}`);
+  }
 }
 
 export async function saveModuleProgressToSupabase(
