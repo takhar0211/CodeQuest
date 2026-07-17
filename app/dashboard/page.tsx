@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Lock, CheckCircle2, ChevronRight, Star } from "lucide-react";
 import { ClientShell } from "@/components/ClientShell";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { useGameStore } from "@/lib/game/store";
 import { findCourse } from "@/lib/content/courses";
 import { LANG_BY_ID } from "@/lib/content/languages";
@@ -22,14 +23,13 @@ export default function Dashboard() {
   const hydrated = useGameStore((s) => s.hydrated);
   const setHydrated = useGameStore((s) => s.setHydrated);
 
-  useEffect(() => {
-    const t = setTimeout(() => setHydrated(true), 50);
-    return () => clearTimeout(t);
-  }, [setHydrated]);
+  const { loading } = useAuth();
 
   useEffect(() => {
-    if (hydrated && !profile.onboarded) router.replace("/onboarding");
-  }, [hydrated, profile.onboarded, router]);
+    if (hydrated && !loading && !profile.onboarded) {
+      router.replace("/onboarding");
+    }
+  }, [hydrated, loading, profile.onboarded, router]);
 
   const course = useMemo(() => {
     if (!profile.knownLang || !profile.targetLang) return undefined;
