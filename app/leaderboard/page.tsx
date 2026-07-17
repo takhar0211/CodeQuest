@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseServerClient as createClient } from "@/lib/supabase/server";
 import { LeaderboardClient } from "./LeaderboardClient";
 
 export default async function LeaderboardPage() {
