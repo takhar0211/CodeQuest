@@ -1,21 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Lock, CheckCircle2, ChevronRight, Star } from "lucide-react";
 import { ClientShell } from "@/components/ClientShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useGameStore } from "@/lib/game/store";
-import { findCourse } from "@/lib/content/courses";
+import { fetchCourseFromSupabase } from "@/lib/db/courses";
 import { LANG_BY_ID } from "@/lib/content/languages";
 import {
   isModuleUnlocked,
   moduleProgressPct,
 } from "@/lib/game/engine";
 import { cn } from "@/lib/utils";
-import type { Module } from "@/lib/types";
+import type { Module, Course } from "@/lib/types";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -31,15 +31,32 @@ export default function Dashboard() {
     }
   }, [hydrated, loading, profile.onboarded, router]);
 
-  const course = useMemo(() => {
-    if (!profile.knownLang || !profile.targetLang) return undefined;
-    return findCourse(profile.knownLang, profile.targetLang);
+  const [course, setCourse] = useState<Course | undefined | null>(null);
+  
+  useEffect(() => {
+    if (profile.knownLang && profile.targetLang) {
+      fetchCourseFromSupabase(profile.knownLang, profile.targetLang).then(c => {
+        setCourse(c || undefined);
+      });
+    } else {
+      setCourse(undefined);
+    }
   }, [profile.knownLang, profile.targetLang]);
 
   const levelModules = useMemo(() => {
     if (!course) return [];
     return course.modules.filter((m) => m.level === profile.level);
   }, [course, profile.level]);
+
+  if (course === null) {
+    return (
+      <ClientShell>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-gold-400">Loading course map...</div>
+        </div>
+      </ClientShell>
+    );
+  }
 
   return (
     <ClientShell>

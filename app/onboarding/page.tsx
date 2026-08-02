@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { LANGUAGES } from "@/lib/content/languages";
-import { COURSES } from "@/lib/content/courses";
+import { fetchAvailablePairs } from "@/lib/db/courses";
 import type { LanguageId, SkillLevel } from "@/lib/types";
 import { useGameStore } from "@/lib/game/store";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -52,13 +52,15 @@ export default function Onboarding() {
     return () => clearTimeout(t);
   }, [setHydrated]);
 
-  const supportedPairs = useMemo(
-    () =>
-      new Set(
-        COURSES.map((c) => c.knownLang + "→" + c.targetLang),
-      ),
-    [],
-  );
+  const [supportedPairs, setSupportedPairs] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    fetchAvailablePairs().then((pairs) => {
+      setSupportedPairs(
+        new Set(pairs.map((p) => p.knownLang + "→" + p.targetLang))
+      );
+    });
+  }, []);
 
   const pairHasCourse =
     known && target && supportedPairs.has(known + "→" + target);

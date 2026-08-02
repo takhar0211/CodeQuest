@@ -138,6 +138,7 @@ export async function saveProfileToSupabase(
   const { error } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
   if (error) {
     console.error("❌ saveProfile error:", error);
+    throw new Error(`Failed to save profile: ${error.message}`);
   } else {
     console.log(`✅ Profile saved for user ${userId} | Onboarded: ${profile.onboarded}`);
   }
@@ -158,7 +159,10 @@ export async function saveModuleProgressToSupabase(
   const { error } = await supabase
     .from("module_progress")
     .upsert(row, { onConflict: "user_id,module_id" });
-  if (error) console.warn("saveModuleProgress error", error);
+  if (error) {
+    console.warn("saveModuleProgress error", error);
+    throw new Error(`Failed to save module progress: ${error.message}`);
+  }
 }
 
 export async function appendQuizHistory(

@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, ArrowRight, Sword, Home } from "lucide-react";
 import { ClientShell } from "@/components/ClientShell";
 import { useGameStore } from "@/lib/game/store";
-import { findCourse } from "@/lib/content/courses";
+import { fetchCourseFromSupabase } from "@/lib/db/courses";
 import { cn } from "@/lib/utils";
-import type { QuizQuestion } from "@/lib/types";
+import type { QuizQuestion, Course } from "@/lib/types";
 
 export default function QuizPage({
   params,
@@ -32,9 +32,16 @@ export default function QuizPage({
     if (hydrated && !profile.onboarded) router.replace("/onboarding");
   }, [hydrated, profile.onboarded, router]);
 
-  const course = useMemo(() => {
-    if (!profile.knownLang || !profile.targetLang) return undefined;
-    return findCourse(profile.knownLang, profile.targetLang);
+  const [course, setCourse] = useState<Course | undefined | null>(null);
+
+  useEffect(() => {
+    if (profile.knownLang && profile.targetLang) {
+      fetchCourseFromSupabase(profile.knownLang, profile.targetLang).then(c => {
+        setCourse(c || undefined);
+      });
+    } else {
+      setCourse(undefined);
+    }
   }, [profile.knownLang, profile.targetLang]);
 
   const mod = course?.modules.find((m) => m.id === moduleId);
@@ -46,7 +53,17 @@ export default function QuizPage({
   const [debugAnsweredCorrect, setDebugAnsweredCorrect] = useState(false);
   const [done, setDone] = useState(false);
 
-  if (!course || !mod) {
+  if (course === null) {
+    return (
+      <ClientShell>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-gold-400">Loading trial...</div>
+        </div>
+      </ClientShell>
+    );
+  }
+
+  if (!course || !mod || !mod.quiz || mod.quiz.length === 0) {
     return (
       <ClientShell>
         <div className="panel-wood p-6 text-center">

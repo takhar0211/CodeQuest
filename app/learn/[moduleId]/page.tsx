@@ -9,8 +9,9 @@ import { SyntaxCompare } from "@/components/lesson/SyntaxCompare";
 import { CodeRunner } from "@/components/lesson/CodeRunner";
 import { ExplanationChat } from "@/components/lesson/ExplanationChat";
 import { useGameStore } from "@/lib/game/store";
-import { findCourse } from "@/lib/content/courses";
+import { fetchCourseFromSupabase } from "@/lib/db/courses";
 import { isModuleUnlocked } from "@/lib/game/engine";
+import type { Course } from "@/lib/types";
 
 export default function LessonPage({
   params,
@@ -34,9 +35,16 @@ export default function LessonPage({
     if (hydrated && !profile.onboarded) router.replace("/onboarding");
   }, [hydrated, profile.onboarded, router]);
 
-  const course = useMemo(() => {
-    if (!profile.knownLang || !profile.targetLang) return undefined;
-    return findCourse(profile.knownLang, profile.targetLang);
+  const [course, setCourse] = useState<Course | undefined | null>(null);
+  
+  useEffect(() => {
+    if (profile.knownLang && profile.targetLang) {
+      fetchCourseFromSupabase(profile.knownLang, profile.targetLang).then(c => {
+        setCourse(c || undefined);
+      });
+    } else {
+      setCourse(undefined);
+    }
   }, [profile.knownLang, profile.targetLang]);
 
   const mod = course?.modules.find((m) => m.id === moduleId);
@@ -50,6 +58,16 @@ export default function LessonPage({
   useEffect(() => {
     setExplainIdx(null);
   }, [lessonIdx, moduleId]);
+
+  if (course === null) {
+    return (
+      <ClientShell>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-gold-400">Loading lesson...</div>
+        </div>
+      </ClientShell>
+    );
+  }
 
   if (!course || !mod) {
     return (
