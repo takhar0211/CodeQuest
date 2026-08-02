@@ -28,7 +28,8 @@ export async function runJavaScript(
         };
         let err;
         try {
-          (function(){ ${code} })();
+          const userCode = ${JSON.stringify(code)};
+          eval(userCode);
         } catch(e){ err = (e && e.message) || String(e); }
         parent.postMessage({ channel: ${JSON.stringify(channel)}, output: lines.join('\\n'), error: err }, '*');
       })();
