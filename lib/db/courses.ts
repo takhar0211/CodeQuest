@@ -17,33 +17,39 @@ export async function fetchCourseFromSupabase(
       known_lang,
       target_lang,
       title,
-      description,
       modules (
         id,
         title,
-        description,
+        tagline,
+        icon,
         level,
         order_index,
+        requires,
+        reward_xp,
         lessons (
           id,
           title,
           intro,
           real_world,
+          exercise,
           order_index,
           lesson_comparisons (
             concept,
             known_code,
             target_code,
-            explanation,
+            note,
             order_index
           )
         ),
         quiz_questions (
-          question,
-          code_snippet,
-          options,
+          kind,
+          id,
+          prompt,
+          broken_code,
+          choices,
           correct_index,
           explanation,
+          xp,
           order_index
         )
       )
