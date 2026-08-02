@@ -1,0 +1,222 @@
+================================================================================
+                       CODEQUEST: TECHNICAL DOCUMENTATION
+================================================================================
+
+# 1. Project Overview
+- **Project objective:** CodeQuest aims to gamify the experience of learning a new programming language for software engineers who already know at least one language. It maps the syntax and concepts of a known language to a target language.
+- **Problem statement:** Traditional tutorials teach syntax from scratch (e.g., "what is a variable"), which wastes the time of experienced developers. CodeQuest bridges the gap by directly translating concepts (e.g., "how do I do Python's list comprehension in Java?").
+- **Real-world use case:** A React developer (JavaScript) gets a new job requiring Python. They can use CodeQuest to rapidly ramp up on Python idioms and standard libraries without sitting through a "Python for Beginners" course.
+- **Key features:** 
+  - Dynamic language-to-language mappings
+  - Sandboxed code execution (JS via iframe, Python via Pyodide)
+  - Interactive quizzes with XP/Level progression
+  - OpenAI-powered Mentor and Explanation Chat for immediate feedback
+- **Target users:** Existing software developers, computer science students, and engineers switching tech stacks.
+- **Why this architecture was chosen:** Next.js App Router provides excellent SEO, routing, and React Server Components. Supabase provides a rapid, scalable, and secure Postgres database with built-in Auth. Zustand offers lightweight, fast, client-side state management (with localStorage persistence) to enable guest mode and instant UI updates.
+
+# 2. Folder & File Structure
+CodeQuest Root
+├── app/                  # Next.js App Router (Pages, API routes, Layouts)
+│   ├── api/              # Serverless API routes (OpenAI integrations, DB seed scripts)
+│   ├── dashboard/        # Main user dashboard displaying unlocked modules
+│   ├── learn/            # The lesson reading interface
+│   ├── quiz/             # Interactive quiz/code execution interface
+│   └── onboarding/       # User profile setup (Name, Level, Languages)
+├── components/           # Reusable React components
+│   ├── auth/             # AuthProvider handling session state
+│   ├── hud/              # Heads-up display for XP, Level, and Streak
+│   └── lesson/           # Complex interactive components (CodeRunner, SyntaxCompare)
+├── docs/                 # Project documentation and guides
+├── lib/                  # Core application logic and utilities
+│   ├── content/          # (Legacy/Reference) Static language mappings
+│   ├── db/               # Supabase database access layers
+│   ├── game/             # Zustand state management, progression logic
+│   ├── runner/           # Code execution sandboxes (javascript.ts, python.ts)
+│   ├── supabase/         # Supabase client singletons (browser/server)
+│   └── sync/             # Logic to synchronize Zustand state with Postgres
+├── supabase/             # Database schemas and triggers
+│   ├── schema.sql        # Core user profiles and module progress schema
+│   └── schema_courses.sql# Relational schema for course content
+└── middleware.ts         # Next.js edge middleware for route protection
+
+# 3. Tech Stack
+## Frontend
+- **Next.js (App Router):** Chosen for its routing and performance. Advantages: server-side rendering, API routes in the same repo. Limitations: complex caching semantics. 
+- **Tailwind CSS:** Chosen for utility-first styling. Eliminates context switching.
+- **Framer Motion:** Used for fluid animations, making the app feel "gamified" (e.g., XP bobbing, slide transitions).
+- **Zustand:** Chosen over Redux for boilerplate-free global state.
+
+## Backend & Database
+- **Supabase (PostgreSQL):** Chosen for real-time capabilities, Row Level Security (RLS), and native Auth. Advantages: fully featured Postgres, rapid setup.
+- **Supabase GoTrue Auth:** Handles JWTs, email/password, and OAuth natively.
+
+## Execution & AI Integrations
+- **Pyodide:** Compiles Python to WebAssembly, allowing Python to run securely in the browser.
+- **iframe Sandbox:** Executes JS securely without cross-site scripting vulnerabilities.
+- **OpenAI (gpt-4o-mini):** Provides the "Explain" chat and "Mentor" chat. Fast, accurate, and relatively cheap for token usage.
+
+# 4. System Architecture
++-----------------+       (3) Authenticates / Syncs State       +-------------------+
+|  Browser (UI)   | <=========================================> |  Supabase (Auth)  |
+|  Next.js Client |                                             |  Supabase (DB)    |
++-----------------+       (4) Executes Code Locally             +-------------------+
+        ^ |                   (Pyodide / Iframe)
+        | | 
+        | | (1) Fetches Initial Page & Server Components
+        | | (2) Calls /api/explain or /api/mentor
+        v v
++-----------------+       (5) Relays Prompt via API Key         +-------------------+
+| Next.js Server  | ==========================================> |    OpenAI API     |
+| (API Routes)    |                                             |  (gpt-4o-mini)    |
++-----------------+                                             +-------------------+
+
+# 5. Module-by-Module Breakdown
+- **Auth Module (`components/auth/AuthProvider.tsx`)**: Initializes Supabase, listens to JWT changes, and bridges the server `User` state to the client `useGameStore`.
+- **Game Store (`lib/game/store.ts`)**: Uses Zustand to hold the user's `profile`, `xp`, `streak`, and `progress`. Has fire-and-forget sync methods that write to Supabase via `lib/sync/profile.ts`.
+- **Code Runners (`lib/runner`)**: 
+  - `javascript.ts`: Injects code into an invisible `iframe` via `eval()`, catches syntax and runtime errors, captures `console.log`, and returns it via `postMessage`.
+  - `python.ts`: Lazily loads WebAssembly Pyodide, captures `sys.stdout` and `sys.stderr`, and evaluates Python code.
+- **Course DB Layer (`lib/db/courses.ts`)**: Translates relational Postgres rows (courses > modules > lessons > comparisons > quizzes) back into the heavily nested TypeScript objects (`Course` type) expected by the frontend UI.
+
+# 6. Database Documentation
+## Tables & Relationships
+- `profiles`: 1-to-1 with `auth.users`. Stores display name, languages, XP, streak, and `onboarded` boolean.
+- `module_progress`: 1-to-Many from `profiles`. Stores which lessons are completed in a module and best quiz score.
+- `courses`: The root content table (e.g., Python to C++).
+- `modules`: A chapter within a course (e.g., "Variables & Types"). Belongs to `courses`.
+- `lessons`: Belongs to `modules`.
+- `lesson_comparisons`: Belongs to `lessons`. Contains exact code translations (known vs target code).
+- `quiz_questions`: Belongs to `modules`. Contains multiple-choice, debugging, or code-writing challenges.
+
+## RLS & Security
+Every table has Row Level Security (RLS) enabled. 
+- Content tables (`courses`, `modules`, etc.) are `SELECT USING (true)` (readable by all).
+- Progress tables (`profiles`, `module_progress`) use `USING (auth.uid() = id)` meaning users can only select and upsert their own progress rows.
+
+# 7. API Documentation
+## `/api/seed-courses` (GET)
+- **Purpose**: Drops all existing course content in Supabase and re-inserts the latest hardcoded data from `lib/content/courses.ts` using bulk upserts.
+- **Response**: `200 OK` with JSON object showing total inserted counts.
+- **Auth**: Currently public (useful for dev), should be secured in production.
+
+## `/api/explain` (POST)
+- **Body**: `{ concept, knownCode, targetCode, knownLang, targetLang }`
+- **Purpose**: Asks OpenAI to explain the difference between the two code snippets in detail.
+- **Response**: A Server-Sent Event (SSE) stream of the Markdown response.
+
+## `/api/mentor` (POST)
+- **Body**: `{ messages, code, stdout, stderr, language, prompt }`
+- **Purpose**: Acts as an AI tutor during quiz failure. Takes the user's broken code and the expected prompt, and hints at the solution without giving it away directly.
+- **Response**: SSE text stream.
+
+# 8. Authentication & Authorization
+The app uses Supabase GoTrue (JWT).
+1. User submits email/password to `/signup`.
+2. Supabase creates `auth.users` row.
+3. Postgres trigger `handle_new_user` immediately creates a `public.profiles` row with default stats.
+4. Client `AuthProvider` sees the session, fetches the profile, and updates `useGameStore`.
+5. Next.js edge `middleware.ts` guards `/dashboard` and `/onboarding` — unauthenticated users are HTTP 302 redirected to `/login`.
+
+# 9. Complete Data Flow (Completing a Lesson)
+1. User is on `/learn/[moduleId]` and clicks "Complete & Continue".
+2. UI calls `store.completeLesson(moduleId, lessonId, xp)`.
+3. Zustand adds the `lessonId` to the `module_progress` array and adds `xp`.
+4. Zustand synchronously triggers `syncModule(profile, moduleId)` and `syncProfile(profile)`.
+5. Background async functions in `lib/sync/profile.ts` run `supabase.from('module_progress').upsert(...)`.
+6. UI optimistically navigates to the next lesson or the quiz.
+
+# 10. Build the Project from Scratch
+1. **Initialize Next.js**: `npx create-next-app@latest .`
+2. **Setup Tailwind & Lucide**: Install UI dependencies.
+3. **Setup Supabase**: `npm i @supabase/supabase-js @supabase/ssr`. Create `.env.local`. Run SQL schemas in the Supabase Dashboard.
+4. **Zustand Store**: Build `lib/game/store.ts` for in-memory progression.
+5. **UI Shell**: Build `layout.tsx` and the `ClientShell` / `Hud`.
+6. **Code Runners**: Implement `lib/runner/javascript.ts` (iframe) and `lib/runner/python.ts` (Pyodide).
+7. **APIs**: Setup the OpenAI routes for `explain` and `mentor`.
+8. **Auth & Sync**: Wrap the app in `AuthProvider` and build `lib/sync/bridge.ts` to push state changes to Postgres.
+9. **Seed Data**: Run the `/api/seed-courses` endpoint to populate the DB.
+
+# 11. Development Journey
+- **Planning & Arch**: Picked Next.js for RSCs, Zustand for fast client updates, and Supabase for instantaneous DB setup.
+- **Frontend Core**: Built the static UI (Dashboard, Onboarding) first to get the feel of the "gamified" app.
+- **Execution Engine**: Sandboxing code is the hardest part; tackled Pyodide and iframes early to ensure the core learning loop was viable.
+- **Backend Syncing**: Initially, progress was only stored in `localStorage`. Later, we implemented Supabase Auth and built a 2-way sync bridge (`lib/sync/profile.ts`).
+- **Data Migration**: Hardcoded courses became a bottleneck, so we moved all content into Postgres and built a bulk-insertion seed script.
+
+# 12. Challenges & Solutions
+- **Challenge:** Browser hanging on `/api/seed-courses`. 
+  - **Root Cause:** Thousands of sequential row-by-row `.upsert()` queries overwhelmed the Next.js process and network layer.
+  - **Solution:** Restructured the seed script to compile arrays of hundreds of rows and send them to Supabase in a single bulk `.insert()` operation, dropping execution time from 20s to <1s.
+- **Challenge:** CodeRunner timing out on syntax errors in JS.
+  - **Root Cause:** Injecting JS with syntax errors directly into a `<script>` body caused the entire tag to fail to parse, meaning the `try..catch` was ignored.
+  - **Solution:** Switched to evaluating code as a JSON string using `eval()` inside a runtime `try..catch`, properly capturing `SyntaxError` and returning it to the parent.
+- **Challenge:** Login loop asking for name infinitely.
+  - **Root Cause:** The `profiles` table didn't exist, causing the profile fetch to silently fail. 
+  - **Solution:** Executed `schema.sql` and fixed the `/login` route to forcefully redirect onboarded users directly to `/dashboard`.
+
+# 13. Error Handling
+- **Database:** `lib/sync/profile.ts` catches Postgres errors, logs them to the console, and throws them to ensure they aren't swallowed silently.
+- **Client Execution:** `runJavaScript` and `runPython` are wrapped in heavily isolated `try..catch` blocks. If they time out (exceed 2s or 8s), they reject the promise securely.
+- **AI Integrations:** `route.ts` API handlers wrap OpenAI calls in try-catch and return `500` HTTP status codes with fallback AI responses if rate-limited.
+
+# 14. Performance
+- **Optimizations:** Code execution happens entirely locally on the user's CPU, costing $0 in server compute. 
+- **Caching:** The `getPyodide()` instance is cached as a singleton in memory. It only downloads the 10MB WebAssembly binary once per browser session.
+- **Database Fetching:** Courses are fetched with deeply nested GraphQL-style joins (`modules(lessons(lesson_comparisons))`) enabling the frontend to retrieve the entire interactive course structure in exactly ONE network request!
+
+# 15. Security
+- **Auth:** Standard Supabase JWTs stored in HTTP-only cookies (`@supabase/ssr`).
+- **Authorization (RLS):** Policies physically block users from reading or writing `module_progress` rows that don't belong to their `auth.uid()`.
+- **Code Sandbox:** JavaScript executes in an `iframe` with `sandbox="allow-scripts"`. The lack of `allow-same-origin` means the iframe has an opaque origin, preventing it from stealing parent cookies or `localStorage`.
+
+# 16. Deployment
+- **Infrastructure:** Vercel for frontend/APIs, Supabase for PostgreSQL/Auth.
+- **Environment Variables:** Needs `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (for seed script), and `OPENAI_API_KEY`.
+- **Deployment Process:** Push to GitHub -> Vercel automatically builds and deploys. 
+
+# 17. Design Decisions
+- **Zustand over Redux:** Zustand's API allows reading state outside of React (`useGameStore.getState()`), which is strictly required for the `AuthProvider` to cleanly merge local guest data with server data without complex React hooks.
+- **Client Execution over Docker containers:** Spinning up Docker containers for code execution is expensive and slow. Pyodide/Iframes allow instant execution at scale for free.
+
+# 18. Code Walkthrough
+1. Client requests `/`. `middleware.ts` sees no session, renders `app/page.tsx`.
+2. User clicks "Sign up", goes to `/signup`, creates account. 
+3. `AuthProvider` mounts, triggers `supabase.auth.onAuthStateChange`, fetches DB profile, sets Zustand to `hydrated: true`.
+4. User completes Onboarding, navigates to `/dashboard`. `fetchCourseFromSupabase` queries the DB and populates the module map.
+5. User clicks a lesson, reads `app/learn/[moduleId]/page.tsx`, clicks "Complete", `syncModule()` writes `completed_lesson_ids` back to Postgres.
+
+# 19. Complete Interview Preparation
+**Q: How does the application prevent arbitrary code execution attacks?**
+A: All code is executed purely on the client side. JavaScript is isolated in a sandboxed iframe with an opaque origin, restricting DOM/cookie access. Python is executed in Pyodide, which runs sandboxed within WebAssembly. No code is executed on the Next.js server.
+
+**Q: Explain how the data fetching architecture was improved.**
+A: Initially, the seed script used a loop of sequential row-by-row `.upsert()` calls, which blocked the thread, triggered connection pool exhaustion, and hung the browser. We refactored this into a bulk execution model, compiling objects into large arrays and inserting them all at once, improving performance by over 95%.
+
+**Q: Why was Zustand chosen for state management instead of React Context?**
+A: React Context forces unnecessary re-renders for consumers when values change. Zustand allows subscribing only to specific slices of state. Furthermore, Zustand supports persisting to `localStorage` natively, and allows reading/writing state outside of React (e.g. in standalone helper scripts like `syncProfile`).
+
+**Q: Describe the login/onboarding loop bug and how you solved it.**
+A: Users were constantly asked to onboard upon logging in. The root cause was twofold: the `profiles` SQL schema hadn't been executed, causing the server profile fetch to silently fail (making the app assume they were a new user), and the login page blindly redirected to the `?next=/onboarding` URL parameter. We executed the schema, removed the silent catch block, and overrode the login redirect logic to forcefully send authenticated, onboarded users to the dashboard.
+
+# 20. Future Improvements
+- **Scalability:** Introduce Redis for rate-limiting OpenAI API calls based on User ID to prevent abuse.
+- **Security:** Remove `/api/seed-courses` entirely in production or protect it behind an Admin Role check.
+- **Features:** Add global real-time multiplayer leaderboards utilizing Supabase WebSockets.
+
+# 21. Glossary
+- **Pyodide:** A port of CPython to WebAssembly.
+- **RLS (Row Level Security):** Postgres feature that restricts which rows a database user can act upon.
+- **Zustand:** A small, fast, scalable bearbones state-management solution for React.
+- **SSE (Server-Sent Events):** A one-way communication channel from server to client, used for streaming AI text responses.
+
+# 22. Appendix (High Level Data Flow)
+[User UI Action] -> [Zustand `useGameStore` Updates In-Memory & LocalStorage]
+                          |
+                          v
+         [Fire-and-forget `syncProfile` Helper]
+                          |
+                          v
+     [Supabase Browser Client (`supabase.from.upsert`)]
+                          |
+                          v
+          [PostgreSQL Table + Updated_At Triggers]
