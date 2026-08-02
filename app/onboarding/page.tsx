@@ -41,11 +41,12 @@ export default function Onboarding() {
   const setHydrated = useGameStore((s) => s.setHydrated);
   const auth = useAuth();
 
-  const [step, setStep] = useState<Step>("name");
-  const [name, setName] = useState("");
-  const [known, setKnown] = useState<LanguageId | null>(null);
-  const [target, setTarget] = useState<LanguageId | null>(null);
-  const [level, setLevel] = useState<SkillLevel>("beginner");
+  const profile = useGameStore((s) => s.profile);
+  const [step, setStep] = useState<Step>(profile.name && profile.name !== "Chieftain" ? "known" : "name");
+  const [name, setName] = useState(profile.name !== "Chieftain" ? profile.name : "");
+  const [known, setKnown] = useState<LanguageId | null>(profile.knownLang);
+  const [target, setTarget] = useState<LanguageId | null>(profile.targetLang);
+  const [level, setLevel] = useState<SkillLevel>(profile.level || "beginner");
 
   useEffect(() => {
     const t = setTimeout(() => setHydrated(true), 50);
