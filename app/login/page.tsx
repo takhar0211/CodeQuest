@@ -66,8 +66,13 @@ function LoginForm() {
             }
           }
           setSyncBridge({ supabase, user: data.user });
+          
+          const isUserOnboarded = serverProfile?.onboarded || (localProfile.onboarded && !serverProfile);
+          const finalDest = (isUserOnboarded && next === "/onboarding") ? "/dashboard" : next;
+          router.replace(finalDest);
+        } else {
+          router.replace(next);
         }
-        router.replace(next);
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
