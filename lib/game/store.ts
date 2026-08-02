@@ -15,6 +15,7 @@ import {
   appendQuizHistory,
   saveModuleProgressToSupabase,
   saveProfileToSupabase,
+  syncAllToSupabase,
 } from "@/lib/sync/profile";
 
 // Fire-and-forget helpers — never throw, never block the UI.
@@ -111,7 +112,8 @@ export const useGameStore = create<State & Actions>()(
             onboarded: true,
           },
         }));
-        syncProfile(get().profile);
+        const b = getSyncBridge();
+        if (b) void syncAllToSupabase(b.supabase, b.user.id, get().profile);
       },
       ensureModuleProgress: (moduleId) => {
         const existing = get().profile.progress[moduleId];

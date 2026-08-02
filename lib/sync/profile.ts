@@ -178,3 +178,20 @@ export async function appendQuizHistory(
   const { error } = await supabase.from("quiz_history").insert(row);
   if (error) console.warn("appendQuizHistory error", error);
 }
+
+export async function syncAllToSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  profile: UserProfile,
+): Promise<void> {
+  // Push the main profile row
+  await saveProfileToSupabase(supabase, userId, profile);
+  
+  // Push all module progress
+  const promises = Object.values(profile.progress).map((mp) =>
+    saveModuleProgressToSupabase(supabase, userId, mp),
+  );
+  await Promise.all(promises);
+  console.log(`✅ Full sync completed for user ${userId}`);
+}
+

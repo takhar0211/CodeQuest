@@ -44,17 +44,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const supabase = getSupabaseBrowserClient();
       setSyncBridge({ supabase, user: u });
       const serverProfile = await loadProfileFromSupabase(supabase, u.id);
+      
+      const localProfile = useGameStore.getState().profile;
+      
       if (serverProfile) {
-        useGameStore.setState({ profile: serverProfile, hydrated: true });
+        // If the local profile has completed onboarding but the server profile hasn't,
+        // it means we have local guest progress that we need to push UP to the server.
+        if (localProfile.onboarded && !serverProfile.onboarded) {
+          console.log("⬆️ Up-syncing local guest progress to server...");
+          
+          // Ensure the name is set if it was left as default
+          const mergedProfile = {
+            ...localProfile,
+            name: localProfile.name !== "Chieftain" ? localProfile.name : (u.user_metadata?.display_name || u.email?.split("@")[0] || "Chieftain")
+          };
+          
+          useGameStore.setState({ profile: mergedProfile, hydrated: true });
+          // Push everything to Supabase async
+          const { syncAllToSupabase } = await import("@/lib/sync/profile");
+          void syncAllToSupabase(supabase, u.id, mergedProfile);
+        } else {
+          // Trust the server profile (down-sync)
+          useGameStore.setState({ profile: serverProfile, hydrated: true });
+        }
       } else {
-        // Fresh user: keep zustand defaults but stamp the email-derived name.
-        useGameStore.setState((s) => ({
-          profile: {
-            ...s.profile,
-            name: u.user_metadata?.display_name || u.email?.split("@")[0] || "Chieftain",
-          },
-          hydrated: true,
-        }));
+        // Fresh user without a DB row yet: keep zustand defaults (with guest progress if any)
+        // but stamp the email-derived name.
+        const mergedProfile = {
+          ...localProfile,
+          name: u.user_metadata?.display_name || u.email?.split("@")[0] || "Chieftain",
+        };
+        useGameStore.setState({ profile: mergedProfile, hydrated: true });
+        
+        // If they already finished onboarding locally, sync it up now
+        if (mergedProfile.onboarded) {
+          const { syncAllToSupabase } = await import("@/lib/sync/profile");
+          void syncAllToSupabase(supabase, u.id, mergedProfile);
+        }
       }
     } catch (e) {
       console.warn("applyUser failed", e);

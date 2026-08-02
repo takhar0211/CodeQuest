@@ -59,8 +59,21 @@ function SignupForm() {
       } else {
         if (data.user) {
           const serverProfile = await loadProfileFromSupabase(supabase, data.user.id);
+          const localProfile = useGameStore.getState().profile;
+          
           if (serverProfile) {
-            useGameStore.setState({ profile: serverProfile, hydrated: true });
+            if (localProfile.onboarded && !serverProfile.onboarded) {
+              console.log("⬆️ Up-syncing local guest progress to server on signup...");
+              const mergedProfile = {
+                ...localProfile,
+                name: localProfile.name !== "Chieftain" ? localProfile.name : (serverProfile.name || "Chieftain")
+              };
+              useGameStore.setState({ profile: mergedProfile, hydrated: true });
+              const { syncAllToSupabase } = await import("@/lib/sync/profile");
+              void syncAllToSupabase(supabase, data.user.id, mergedProfile);
+            } else {
+              useGameStore.setState({ profile: serverProfile, hydrated: true });
+            }
           }
           setSyncBridge({ supabase, user: data.user });
         }
